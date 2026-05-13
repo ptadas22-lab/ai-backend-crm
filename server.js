@@ -9,7 +9,7 @@ app.use(cors({
 app.use(express.json()); // 
 app.post("/generate", (req, res) => {
   try {
-    const { budget, location, type } = req.body;
+    const { budget, location, type, count } = req.body;
 
     const b = Number(budget);
 
@@ -17,20 +17,19 @@ app.post("/generate", (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    res.json({
-      result: `
-${type} Shop
+    const ideas = [];
+
+for (let i = 1; i <= count; i++) {
+  ideas.push(`
+${type} Idea ${i}
 High demand in ${location}
-Profit: ₹${Math.floor(b / 10)}K/month
+Profit: ₹${Math.floor(b / (8 + i))}K/month
+`);
+}
 
-Home ${type} Business
-Low investment
-Profit: ₹${Math.floor(b / 8)}K/month
-
-Street ${type} Stall
-Fast customers
-Profit: ₹${Math.floor(b / 12)}K/month
-`
+res.json({
+  result: ideas.join("\n\n")
+});
     });
 
   } catch (err) {
