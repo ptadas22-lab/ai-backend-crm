@@ -12,14 +12,15 @@ app.post("/generate", (req, res) => {
     const { budget, location, type, count } = req.body;
 
     const b = Number(budget);
+    const c = Number(count) || 3;
 
     if (!b || !location || !type) {
-      return res.status(400).json({ error: "Missing fields" });
-    }
+  return res.status(400).json({ error: "Missing fields" });
+}
 
-    const ideas = [];
+const ideas = [];
 
-for (let i = 1; i <= count; i++) {
+for (let i = 1; i <= c; i++) {
   ideas.push(`
 ${type} Idea ${i}
 High demand in ${location}
@@ -30,7 +31,7 @@ Profit: ₹${Math.floor(b / (8 + i))}K/month
 res.json({
   result: ideas.join("\n\n")
 });
-    });
+    
 
   } catch (err) {
     res.status(500).json({ error: err.message });
