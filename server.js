@@ -1,3 +1,7 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI("AIzaSyDSJlc_CxKEoumnotOMrvOffVBglBEwc6w");
+
 const express = require("express");
 const cors = require("cors");
 
@@ -7,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.post("/generate", (req, res) => {
+app.post("/generate", async (req, res) => {
   try {
     const { budget, location, type, count } = req.body;
 
@@ -17,7 +21,33 @@ app.post("/generate", (req, res) => {
     if (!b || !location || !type) {
       return res.status(400).json({ error: "Missing fields" });
     }
+let aiIdeas = [];
 
+try {
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+  const prompt = `
+Give ${count || 5} business idea names only.
+
+Budget: ₹${budget}
+Location: ${location}
+Type: ${type}
+
+Only short names. No explanation.
+`;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
+
+  aiIdeas = text
+    .split("\n")
+    .map(i => i.replace(/[-*0-9.]/g, "").trim())
+    .filter(i => i.length > 3);
+
+} catch (err) {
+  console.log("AI failed, using manual ideas");
+}
     let baseIdeas = [];
 
 if (type.toLowerCase().includes("food")) {
@@ -67,7 +97,7 @@ else {
     const ideas = [];
 
     for (let i = 0; i < c; i++) {
-      const ideaText = baseIdeas[i % baseIdeas.length];
+      const ideaText = aiIdeas[i] || baseIdeas[i % baseIdeas.length];
       const demand = demandTypes[i % demandTypes.length];
 
      const investment = Math.floor(b * (0.3 + i * 0.05));
