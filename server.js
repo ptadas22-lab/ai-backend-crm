@@ -17,19 +17,28 @@ app.post("/generate", (req, res) => {
     if (!b || !location || !type) {
   return res.status(400).json({ error: "Missing fields" });
 }
-
+const baseIdeas = [
+  `Start a small ${type} shop near market in ${location}`,
+  `Run a home-based ${type} service with WhatsApp orders`,
+  `Open a roadside ${type} stall in high footfall area`,
+  `Sell ${type} products through Instagram in ${location}`,
+  `Launch a delivery-based ${type} business`,
+  `Create a niche ${type} service for offices`,
+  `Start a budget ${type} subscription service`,
+  `Resell ${type} items locally`,
+  `Open a weekend ${type} pop-up shop`,
+  `Offer customized ${type} services`
+];
 const ideas = [];
 
-for (let i = 1; i <= c; i++) {
-  ideas.push(`
-${type} Idea ${i}
-High demand in ${location}
-Profit: ₹${Math.floor(b / (8 + i))}K/month
-`);
-}
+for (let i = 0; i < c; i++) {
+  const ideaText = baseIdeas[i % baseIdeas.length];
 
-res.json({
-  result: ideas.join("\n\n")
+  ideas.push(`
+${ideaText}
+High demand in ${location}
+Profit: ₹${Math.floor(b * (0.08 + i * 0.015))}/month
+`);
 });
     
 
