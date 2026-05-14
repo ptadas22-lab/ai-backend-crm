@@ -18,18 +18,41 @@ app.post("/generate", (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    const baseIdeas = [
-      `Start a small ${type} shop near market in ${location}`,
-      `Run a home-based ${type} service with WhatsApp orders`,
-      `Open a roadside ${type} stall in high footfall area`,
-      `Sell ${type} products through Instagram in ${location}`,
-      `Launch a delivery-based ${type} business`,
-      `Create a niche ${type} service for offices`,
-      `Start a budget ${type} subscription service`,
-      `Resell ${type} items locally`,
-      `Open a weekend ${type} pop-up shop`,
-      `Offer customized ${type} services`
-    ];
+    let baseIdeas = [];
+
+if (type.toLowerCase().includes("food")) {
+  baseIdeas = [
+    `Cloud kitchen for ${location}`,
+    `Street food cart (evening crowd focus)`,
+    `Healthy tiffin service for offices`,
+    `Late-night snacks delivery`,
+    `Homemade sweets business`,
+    `Juice & smoothie bar`,
+    `College area fast food stall`
+  ];
+}
+
+else if (type.toLowerCase().includes("online")) {
+  baseIdeas = [
+    `Instagram store selling trending products`,
+    `Dropshipping business`,
+    `Digital products (ebooks/templates)`,
+    `Affiliate marketing store`,
+    `Print-on-demand T-shirt brand`,
+    `Local products selling via WhatsApp`
+  ];
+}
+
+else {
+  baseIdeas = [
+    `Local service business for ${type}`,
+    `${type} consulting service`,
+    `${type} reselling`,
+    `${type} for small businesses`,
+    `Freelance ${type} services`,
+    `Subscription-based ${type}`
+  ];
+}
 
     const demandTypes = [
       "High demand in local markets",
@@ -65,5 +88,6 @@ Profit: ₹${Math.floor(b * (0.08 + i * 0.015))}/month
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
+  console.log("NEW VERSION RUNNING");
   console.log("Server running on port", PORT);
 });
