@@ -2,6 +2,11 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
+
+// ✅ MUST BE HERE (before routes)
+app.use(cors());
+app.use(express.json());
+
 app.post("/generate", (req, res) => {
   try {
     const { budget, location, type, count } = req.body;
@@ -57,10 +62,6 @@ Profit: ₹${Math.floor(b * (0.08 + i * 0.015))}/month
     res.status(500).json({ error: err.message });
   }
 });
-app.use(cors());
-
-app.use(express.json()); // 
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
