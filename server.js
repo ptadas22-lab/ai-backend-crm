@@ -57,9 +57,7 @@ Profit: ₹${Math.floor(b * (0.08 + i * 0.015))}/month
     res.status(500).json({ error: err.message });
   }
 });
-app.use(cors({
-  origin: "https://ptadas22-lab.github.io"
-}));
+app.use(cors());
 
 app.use(express.json()); // 
 
