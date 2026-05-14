@@ -71,19 +71,19 @@ else {
       const demand = demandTypes[i % demandTypes.length];
 
      const investment = Math.floor(b * (0.3 + i * 0.05));
-const profit = Math.floor(b * (0.08 + i * 0.02));
+const profitValue = Math.floor(b * (0.08 + i * 0.02));
 
 ideas.push(`
 ${ideaText}
 
 📍 Location: ${location}
 💸 Investment: ₹${investment}
-📈 Expected Profit: ₹${profit}/month
+📈 Expected Profit: ₹${profitValue}/month
 🔥 ${demand}
 
 💡 Tip: Start small and scale based on demand
 `);
-
+    }
     res.json({
       result: ideas.join("\n\n")
     });
