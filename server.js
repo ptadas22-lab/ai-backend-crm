@@ -30,13 +30,26 @@ const baseIdeas = [
   `Offer customized ${type} services`
 ];
 const ideas = [];
-
 for (let i = 0; i < c; i++) {
   const ideaText = baseIdeas[i % baseIdeas.length];
+  const demand = demandTypes[i % demandTypes.length];
 
   ideas.push(`
 ${ideaText}
-High demand in ${location}
+${demand} in ${location}
+Profit: ₹${Math.floor(b * (0.08 + i * 0.015))}/month
+`);
+}
+
+const demandTypes = [
+  "High demand in local markets",
+  "Growing demand among young customers",
+  "Popular in residential areas",
+  "High repeat customers potential",
+  "Trending business in urban areas",
+  "Good demand near colleges/offices",
+  "Increasing demand via online orders"
+];
 Profit: ₹${Math.floor(b * (0.08 + i * 0.015))}/month
 `);
 });
