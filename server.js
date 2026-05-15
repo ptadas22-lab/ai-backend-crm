@@ -96,7 +96,7 @@ console.log("Gemini response:", text);
     } catch (err) {
   console.error("GEMINI ERROR:", err);
 }
-    }
+    
 
     // -----------------------------
     // 🔁 FINAL OUTPUT
