@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ Gemini setup
-const genAI = new GoogleGenerativeAI("AIzaSyDSJlc_CxKEoumnotOMrvOffVBglBEwc6w");
+const genAI = new GoogleGenerativeAI("AIzaSyCmKdiXT4gMyrVBKHwqCL0Oj-wW7nJDH4M");
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
@@ -71,7 +71,7 @@ app.post("/generate", async (req, res) => {
     let aiIdeas = [];
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `
 Give ${count || 5} business idea names only.
@@ -82,18 +82,19 @@ Type: ${type}
 
 Only short names. No explanation.
 `;
-
+console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-
+console.log("Gemini response:", text);
       aiIdeas = text
         .split("\n")
         .map(i => i.replace(/[-*0-9.]/g, "").trim())
         .filter(i => i.length > 3);
 
     } catch (err) {
-      console.log("AI failed, using manual ideas");
+  console.error("GEMINI ERROR:", err);
+}
     }
 
     // -----------------------------
