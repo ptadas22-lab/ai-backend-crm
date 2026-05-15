@@ -74,6 +74,7 @@ app.post("/generate", async (req, res) => {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `
+      
 Give ${count || 5} business idea names only.
 
 Budget: ₹${budget}
