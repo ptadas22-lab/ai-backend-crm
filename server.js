@@ -73,15 +73,21 @@ app.post("/generate", async (req, res) => {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `
-      
-Give ${count || 5} business idea names only.
+     const prompt = `
+Generate ${count || 5} unique and practical business ideas for India.
 
-Budget: ₹${budget}
-Location: ${location}
-Type: ${type}
+Details:
+- Budget: ₹${budget}
+- Location: ${location}
+- Type: ${type}
 
-Only short names. No explanation.
+Rules:
+- Give short idea names
+- Avoid generic ideas like "start a shop"
+- Make ideas realistic and specific to Indian market
+- Focus on profitable and trending ideas
+
+Only return list of idea names.
 `;
 console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
