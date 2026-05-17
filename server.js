@@ -1,3 +1,5 @@
+require("dotenv").config();
+console.log("API KEY:", process.env.GEMINI_API_KEY);
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -8,8 +10,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Gemini setup
-const genAI = new GoogleGenerativeAI("AIzaSyCmKdiXT4gMyrVBKHwqCL0Oj-wW7nJDH4M");
+// ✅ Gemini setup (FIXED)
+const API_KEY = process.env.GEMINI_API_KEY;
+
+if (!API_KEY) {
+  console.error("❌ API KEY MISSING");
+  process.exit(1);
+}
+
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
@@ -20,9 +29,6 @@ app.post("/generate", async (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    // -----------------------------
-    // 🔥 YOUR EXISTING LOGIC (KEEP)
-    // -----------------------------
     let baseIdeas = [];
 
     if (type.toLowerCase().includes("food")) {
@@ -65,44 +71,46 @@ app.post("/generate", async (req, res) => {
       "Increasing demand via online orders"
     ];
 
-    // -----------------------------
-    // 🤖 AI PART (NEW)
-    // -----------------------------
     let aiIdeas = [];
 
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `
-      
-Give ${count || 5} business idea names only.
+Generate business ideas based on the user's inputs.
 
-Budget: ₹${budget}
-Location: ${location}
-Type: ${type}
+User Inputs:
+- Budget: ₹${budget}
+- Location: ${location}
+- Business Type: ${type}
 
-Only short names. No explanation.
+Instructions:
+- Give ONLY realistic ideas that work specifically in ${location}
+- Match ideas strictly within budget ₹${budget}
+- Focus on Indian market
+- Avoid generic ideas
+- Keep names short and clear
+
+Return ONLY idea names.
+
+Generate ${count || 10} ideas.
 `;
-console.log("Calling Gemini...");
+
+      console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-console.log("Gemini response:", text);
+      const text = result.response.text();
+
       aiIdeas = text
         .split("\n")
         .map(i => i.replace(/[-*0-9.]/g, "").trim())
         .filter(i => i.length > 3);
 
     } catch (err) {
-  console.error("GEMINI ERROR:", err);
-}
-    
+      console.error("GEMINI ERROR:", err);
+    }
 
-    // -----------------------------
-    // 🔁 FINAL OUTPUT
-    // -----------------------------
     const ideas = [];
-    const c = Number(count) || 3;
+    const c = Number(count) || 5;
     const b = Number(budget);
 
     for (let i = 0; i < c; i++) {
@@ -124,16 +132,64 @@ ${ideaText}
 `);
     }
 
-    res.json({
-      result: ideas.join("\n\n")
-    });
+    res.json({ result: ideas.join("\n\n") });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Start server
+
+// ✅ PLAN ROUTE (FIXED)
+app.post("/plan", async (req, res) => {
+  try {
+    const { name, location, profit } = req.body;
+
+    if (!name || !location) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+Create a detailed business article like a newspaper.
+
+Business: ${name}
+Location: ${location}
+Expected Profit: ${profit}
+
+Include:
+- Market demand
+- Why it works
+- Steps to start
+- Cost
+- Marketing
+- Risks
+- Growth
+`;
+
+    const result = await model.generateContent(prompt);
+
+    let text = "No content generated";
+
+    try {
+      text = result.response.text(); // ✅ FIXED
+    } catch (e) {
+      text =
+        result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        text;
+    }
+
+    res.json({ plan: text });
+
+  } catch (err) {
+    console.error("PLAN ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ✅ START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
