@@ -96,7 +96,7 @@ Generate ${count || 10} ideas.
       console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
+text = response.text();
 
       console.log("Gemini response:", text);
 
@@ -178,9 +178,11 @@ const result = await model.generateContent(prompt);
 let text = "";
 
 try {
-  text = result.response.text();
+  const response = await result.response;   // ✅ FIX 1
+  text = response.text();
 } catch (e) {
   console.log("Fallback used");
+
 
   text =
     result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
@@ -188,7 +190,7 @@ try {
 }
 
 // ✅ ALWAYS RETURN STRING
-res.json({ plan: text || "No content generated" });
+res.json({ plan: String(text || "No content generated") }); // ✅ FIX 2
     
    } catch (err) {
     res.status(500).json({ error: err.message });
