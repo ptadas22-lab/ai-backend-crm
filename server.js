@@ -72,7 +72,43 @@ app.post("/generate", async (req, res) => {
 
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+app.post("/plan", async (req, res) => {
+  try {
+    const { name, location, profit } = req.body;
 
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+Create a detailed business article like a newspaper.
+
+Business: ${name}
+Location: ${location}
+Expected Profit: ${profit}
+
+Write clearly and practically.
+
+Include:
+- Market demand in this location
+- Why this business works here
+- Step-by-step how to start
+- Cost breakdown
+- Marketing strategy
+- Risks and challenges
+- Growth opportunities
+
+Use headings and keep it structured.
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ plan: text });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
       const prompt = `
 Generate business ideas based on the user's inputs.
 
