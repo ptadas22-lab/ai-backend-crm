@@ -98,14 +98,25 @@ Include:
 
 Use headings and keep it structured.
 `;
+const result = await model.generateContent(prompt);
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = result.response.text();
+// ✅ FORCE SAFE TEXT EXTRACTION
+let text = "";
 
-    res.json({ plan: text });
+try {
+  text = result.response.text();
+} catch (e) {
+  console.log("Fallback used");
 
-  } catch (err) {
+  text =
+    result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    "No content generated";
+}
+
+// ✅ ALWAYS RETURN STRING
+res.json({ plan: text || "No content generated" });
+    
+   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
