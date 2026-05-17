@@ -8,8 +8,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Gemini setup
-const genAI = new GoogleGenerativeAI(process.env.AIzaSyD8lwfXU7Hy7KcHnr46FQ_qjXoOHWm1g58);
+// ✅ Gemini setup (FIXED)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
@@ -20,9 +20,6 @@ app.post("/generate", async (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    // -----------------------------
-    // 🔥 EXISTING BASE IDEAS (KEPT)
-    // -----------------------------
     let baseIdeas = [];
 
     if (type.toLowerCase().includes("food")) {
@@ -65,9 +62,6 @@ app.post("/generate", async (req, res) => {
       "Increasing demand via online orders"
     ];
 
-    // -----------------------------
-    // 🤖 AI PART (IMPROVED)
-    // -----------------------------
     let aiIdeas = [];
 
     try {
@@ -88,7 +82,7 @@ Instructions:
 - Avoid generic ideas
 - Keep names short and clear
 
-Return ONLY idea names (no explanation, no numbering, no symbols).
+Return ONLY idea names.
 
 Generate ${count || 10} ideas.
 `;
@@ -96,8 +90,6 @@ Generate ${count || 10} ideas.
       console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
       const text = result.response.text();
-
-      console.log("Gemini response:", text);
 
       aiIdeas = text
         .split("\n")
@@ -108,9 +100,6 @@ Generate ${count || 10} ideas.
       console.error("GEMINI ERROR:", err);
     }
 
-    // -----------------------------
-    // 🔁 FINAL OUTPUT (UNCHANGED LOGIC)
-    // -----------------------------
     const ideas = [];
     const c = Number(count) || 5;
     const b = Number(budget);
@@ -134,20 +123,22 @@ ${ideaText}
 `);
     }
 
-    res.json({
-      result: ideas.join("\n\n")
-    });
+    res.json({ result: ideas.join("\n\n") });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Start server
-const PORT = process.env.PORT || 3000;
+
+// ✅ PLAN ROUTE (FIXED)
 app.post("/plan", async (req, res) => {
   try {
     const { name, location, profit } = req.body;
+
+    if (!name || !location) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -158,42 +149,39 @@ Business: ${name}
 Location: ${location}
 Expected Profit: ${profit}
 
-Write clearly and practically.
-
 Include:
-- Market demand in this location
-- Why this business works here
-- Step-by-step how to start
-- Cost breakdown
-- Marketing strategy
-- Risks and challenges
-- Growth opportunities
-
-Use headings and keep it structured.
+- Market demand
+- Why it works
+- Steps to start
+- Cost
+- Marketing
+- Risks
+- Growth
 `;
-const result = await model.generateContent(prompt);
 
-// ✅ FORCE SAFE TEXT EXTRACTION
-let text = "";
+    const result = await model.generateContent(prompt);
 
-try {
-  text = response.text();
-} catch (e) {
-  console.log("Fallback used");
+    let text = "No content generated";
 
+    try {
+      text = result.response.text(); // ✅ FIXED
+    } catch (e) {
+      text =
+        result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        text;
+    }
 
-  text =
-    result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
-    "No content generated";
-}
+    res.json({ plan: text });
 
-// ✅ ALWAYS RETURN STRING
-res.json({ plan: String(text || "No content generated") }); // ✅ FIX 2
-    
-   } catch (err) {
+  } catch (err) {
+    console.error("PLAN ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+
+// ✅ START SERVER
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
