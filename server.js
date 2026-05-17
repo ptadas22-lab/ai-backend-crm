@@ -1,10 +1,11 @@
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
+
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
+console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ✅ Middleware
 app.use(cors());
