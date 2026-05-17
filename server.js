@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -147,11 +146,12 @@ ${ideaText}
 
 // ✅ PLAN ROUTE (FIXED)
 app.post("/plan", async (req, res) => {
-   if (!genAI) {
+  if (!genAI) {
     return res.json({
       plan: "AI not configured yet"
     });
   }
+
   try {
     const { name, location, profit } = req.body;
 
@@ -182,31 +182,30 @@ Include:
 
     let text = "";
 
-if (result && result.response) {
-  try {
-    text = result.response.text();
-  } catch (e) {
-    console.log("Fallback triggered");
+    try {
+      text = result.response.text();
+    } catch (e) {
+      console.log("Fallback triggered");
 
-    if (
-      result.response.candidates &&
-      result.response.candidates.length > 0 &&
-      result.response.candidates[0].content.parts.length > 0
-    ) {
-      text = result.response.candidates[0].content.parts[0].text;
+      if (
+        result?.response?.candidates?.length > 0 &&
+        result.response.candidates[0]?.content?.parts?.length > 0
+      ) {
+        text = result.response.candidates[0].content.parts[0].text;
+      }
     }
-  console.log("FINAL PLAN TEXT:", text);
+
+    console.log("FINAL PLAN TEXT:", text);
 
     res.json({
-  plan: text || "No AI content generated"
-});
-  catch (err) {
+      plan: text || "No AI content generated"
+    });
+
+  } catch (err) {
     console.error("PLAN ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
-
 // ✅ START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
