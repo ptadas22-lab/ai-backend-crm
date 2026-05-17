@@ -72,54 +72,7 @@ app.post("/generate", async (req, res) => {
 
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-app.post("/plan", async (req, res) => {
-  try {
-    const { name, location, profit } = req.body;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const prompt = `
-Create a detailed business article like a newspaper.
-
-Business: ${name}
-Location: ${location}
-Expected Profit: ${profit}
-
-Write clearly and practically.
-
-Include:
-- Market demand in this location
-- Why this business works here
-- Step-by-step how to start
-- Cost breakdown
-- Marketing strategy
-- Risks and challenges
-- Growth opportunities
-
-Use headings and keep it structured.
-`;
-const result = await model.generateContent(prompt);
-
-// ✅ FORCE SAFE TEXT EXTRACTION
-let text = "";
-
-try {
-  text = result.response.text();
-} catch (e) {
-  console.log("Fallback used");
-
-  text =
-    result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
-    "No content generated";
-}
-
-// ✅ ALWAYS RETURN STRING
-res.json({ plan: text || "No content generated" });
-    
-   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
       const prompt = `
 Generate business ideas based on the user's inputs.
 
@@ -193,6 +146,54 @@ ${ideaText}
 
 // ✅ Start server
 const PORT = process.env.PORT || 3000;
+app.post("/plan", async (req, res) => {
+  try {
+    const { name, location, profit } = req.body;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+Create a detailed business article like a newspaper.
+
+Business: ${name}
+Location: ${location}
+Expected Profit: ${profit}
+
+Write clearly and practically.
+
+Include:
+- Market demand in this location
+- Why this business works here
+- Step-by-step how to start
+- Cost breakdown
+- Marketing strategy
+- Risks and challenges
+- Growth opportunities
+
+Use headings and keep it structured.
+`;
+const result = await model.generateContent(prompt);
+
+// ✅ FORCE SAFE TEXT EXTRACTION
+let text = "";
+
+try {
+  text = result.response.text();
+} catch (e) {
+  console.log("Fallback used");
+
+  text =
+    result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    "No content generated";
+}
+
+// ✅ ALWAYS RETURN STRING
+res.json({ plan: text || "No content generated" });
+    
+   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
