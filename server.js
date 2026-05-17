@@ -192,6 +192,8 @@ Explain clearly with steps, marketing, and growth.
 `;
 
     // ✅ SAFE AI CALL
+    console.log("API KEY CHECK:", process.env.GEMINI_API_KEY);
+console.log("Calling Gemini model...");
     const result = await model.generateContent(prompt);
 
     let text = "";
@@ -214,8 +216,7 @@ Explain clearly with steps, marketing, and growth.
       plan: text || "AI could not generate content"
     });
 
-  } catch (err) {
-    console.error("PLAN ERROR:", err);
+  console.error("PLAN ERROR FULL:", err);
 
     // ✅ NEVER CRASH → ALWAYS RETURN RESPONSE
     res.json({
