@@ -147,84 +147,79 @@ ${ideaText}
 
 // ✅ PLAN ROUTE (FIXED)
 app.post("/plan", async (req, res) => {
-  // ✅ If API not configured
-  if (!genAI) {
-    res.json({
-  plan: "TEST SUCCESS: Your backend is working correctly. AI will be added next."
-});
-  }
   try {
     const { name, location, profit } = req.body;
 
-    // ✅ Validation
+    // ✅ Always validate first
     if (!name || !location) {
-      return res.status(400).json({ error: "Missing fields" });
+      return res.status(400).json({
+        plan: "Missing required fields"
+      });
     }
 
-    // ✅ Model
+    // ✅ If AI not available → return fallback (NO CRASH)
+    if (!genAI) {
+      return res.json({
+        plan: `Business: ${name}
+
+This business can work well in ${location} with proper planning.
+
+Steps:
+- Start small
+- Find local demand
+- Use WhatsApp & Instagram for marketing
+- Focus on repeat customers
+
+Profit: ${profit}
+
+(This is fallback content because AI is not configured)`
+      });
+    }
+
+    // ✅ Create model
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash"
     });
 
-    // ✅ Strong prompt (improved)
     const prompt = `
-Write a detailed business guide like a newspaper article.
+Write a simple business guide.
 
 Business: ${name}
 Location: ${location}
-Expected Profit: ${profit}
+Profit: ${profit}
 
-Rules:
-- Minimum 300 words
-- Use clear headings
-- Give practical steps
-- Explain market demand in ${location}
-- Avoid short answers
-
-Include:
-- Market demand
-- Why it works
-- Step-by-step starting guide
-- Cost breakdown
-- Marketing strategy
-- Risks
-- Growth opportunities
+Explain clearly with steps, marketing, and growth.
 `;
 
-    // ✅ Call Gemini
+    // ✅ SAFE AI CALL
     const result = await model.generateContent(prompt);
 
-    // ✅ DEBUG (important)
-    console.log("RAW RESULT:", JSON.stringify(result, null, 2));
-
-    // ✅ Safe extraction
     let text = "";
 
-    try {
-      text = result.response.text();
-    } catch (e) {
-      console.log("Fallback triggered");
-
-      if (
-        result?.response?.candidates?.length > 0 &&
-        result.response.candidates[0]?.content?.parts?.length > 0
+    // ✅ SAFE RESPONSE EXTRACTION (NO CRASH)
+    if (result && result.response) {
+      if (typeof result.response.text === "function") {
+        text = result.response.text();
+      } else if (
+        result.response.candidates &&
+        result.response.candidates.length > 0
       ) {
-        text = result.response.candidates[0].content.parts[0].text;
+        text =
+          result.response.candidates[0]?.content?.parts?.[0]?.text || "";
       }
     }
 
-    console.log("FINAL PLAN TEXT:", text);
-
-    // ✅ Always return something
+    // ✅ FINAL RESPONSE (ALWAYS SAFE)
     res.json({
-      plan: text || "No AI content generated"
+      plan: text || "AI could not generate content"
     });
 
   } catch (err) {
     console.error("PLAN ERROR:", err);
 
-    res.status(500).json({
-      error: err.message || "Server error"
+    // ✅ NEVER CRASH → ALWAYS RETURN RESPONSE
+    res.json({
+      plan: "Server error occurred. Please try again."
     });
   }
 });
