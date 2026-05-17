@@ -5,7 +5,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 
 // ✅ Middleware
 app.use(cors());
@@ -15,14 +15,18 @@ app.use(express.json());
 const API_KEY = process.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
-  console.error("❌ API KEY MISSING");
-  process.exit(1);
+  console.log("⚠️ No API key — AI disabled");
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
+  if (!genAI) {
+    return res.json({
+      result: "AI not configured yet"
+    });
+  }
   try {
     const { budget, location, type, count } = req.body;
 
@@ -143,6 +147,11 @@ ${ideaText}
 
 // ✅ PLAN ROUTE (FIXED)
 app.post("/plan", async (req, res) => {
+   if (!genAI) {
+    return res.json({
+      plan: "AI not configured yet"
+    });
+  }
   try {
     const { name, location, profit } = req.body;
 
