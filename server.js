@@ -102,6 +102,7 @@ Generate ${count || 10} ideas.
 
       console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
+      console.log("RAW RESULT:", JSON.stringify(result, null, 2));
       const text = result.response.text();
 
       aiIdeas = text
@@ -146,6 +147,7 @@ ${ideaText}
 
 // ✅ PLAN ROUTE (FIXED)
 app.post("/plan", async (req, res) => {
+  // ✅ If API not configured
   if (!genAI) {
     return res.json({
       plan: "AI not configured yet"
@@ -155,31 +157,48 @@ app.post("/plan", async (req, res) => {
   try {
     const { name, location, profit } = req.body;
 
+    // ✅ Validation
     if (!name || !location) {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // ✅ Model
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash"
+    });
 
+    // ✅ Strong prompt (improved)
     const prompt = `
-Create a detailed business article like a newspaper.
+Write a detailed business guide like a newspaper article.
 
 Business: ${name}
 Location: ${location}
 Expected Profit: ${profit}
 
+Rules:
+- Minimum 300 words
+- Use clear headings
+- Give practical steps
+- Explain market demand in ${location}
+- Avoid short answers
+
 Include:
 - Market demand
 - Why it works
-- Steps to start
-- Cost
-- Marketing
+- Step-by-step starting guide
+- Cost breakdown
+- Marketing strategy
 - Risks
-- Growth
+- Growth opportunities
 `;
 
+    // ✅ Call Gemini
     const result = await model.generateContent(prompt);
 
+    // ✅ DEBUG (important)
+    console.log("RAW RESULT:", JSON.stringify(result, null, 2));
+
+    // ✅ Safe extraction
     let text = "";
 
     try {
@@ -197,13 +216,17 @@ Include:
 
     console.log("FINAL PLAN TEXT:", text);
 
+    // ✅ Always return something
     res.json({
       plan: text || "No AI content generated"
     });
 
   } catch (err) {
     console.error("PLAN ERROR:", err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message || "Server error"
+    });
   }
 });
 // ✅ START SERVER
