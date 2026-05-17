@@ -71,7 +71,7 @@ app.post("/generate", async (req, res) => {
     let aiIdeas = [];
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
       const prompt = `
 Generate business ideas based on the user's inputs.
