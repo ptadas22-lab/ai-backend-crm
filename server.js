@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ Gemini setup
-const genAI = new GoogleGenerativeAI("YOUR_API_KEY_HERE"); // ⚠️ keep your key
+const genAI = new GoogleGenerativeAI("AIzaSyBdSPthdn2KvP0cMRSfNR1zBXGMXfNgTHg"); // ⚠️ keep your key
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
