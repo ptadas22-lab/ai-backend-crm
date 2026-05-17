@@ -101,7 +101,7 @@ Use headings and keep it structured.
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || "No data";
 
     res.json({ plan: text });
 
