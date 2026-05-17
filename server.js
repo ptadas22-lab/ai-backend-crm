@@ -149,11 +149,10 @@ ${ideaText}
 app.post("/plan", async (req, res) => {
   // ✅ If API not configured
   if (!genAI) {
-    return res.json({
-      plan: "AI not configured yet"
-    });
+    res.json({
+  plan: "TEST SUCCESS: Your backend is working correctly. AI will be added next."
+});
   }
-
   try {
     const { name, location, profit } = req.body;
 
