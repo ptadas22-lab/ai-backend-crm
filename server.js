@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ Gemini setup
-const genAI = new GoogleGenerativeAI("AIzaSyBdSPthdn2KvP0cMRSfNR1zBXGMXfNgTHg"); // ⚠️ keep your key
+const genAI = new GoogleGenerativeAI(process.env.AIzaSyD8lwfXU7Hy7KcHnr46FQ_qjXoOHWm1g58);
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
@@ -71,7 +71,7 @@ app.post("/generate", async (req, res) => {
     let aiIdeas = [];
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `
 Generate business ideas based on the user's inputs.
@@ -95,8 +95,7 @@ Generate ${count || 10} ideas.
 
       console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-text = response.text();
+      const text = result.response.text();
 
       console.log("Gemini response:", text);
 
@@ -178,7 +177,6 @@ const result = await model.generateContent(prompt);
 let text = "";
 
 try {
-  const response = await result.response;   // ✅ FIX 1
   text = response.text();
 } catch (e) {
   console.log("Fallback used");
