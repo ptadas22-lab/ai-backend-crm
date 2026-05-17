@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ Gemini setup
-const genAI = new GoogleGenerativeAI("AIzaSyCmKdiXT4gMyrVBKHwqCL0Oj-wW7nJDH4M");
+const genAI = new GoogleGenerativeAI("YOUR_API_KEY_HERE"); // ⚠️ keep your key
 
 // ✅ Route
 app.post("/generate", async (req, res) => {
@@ -21,7 +21,7 @@ app.post("/generate", async (req, res) => {
     }
 
     // -----------------------------
-    // 🔥 YOUR EXISTING LOGIC (KEEP)
+    // 🔥 EXISTING BASE IDEAS (KEPT)
     // -----------------------------
     let baseIdeas = [];
 
@@ -66,49 +66,54 @@ app.post("/generate", async (req, res) => {
     ];
 
     // -----------------------------
-    // 🤖 AI PART (NEW)
+    // 🤖 AI PART (IMPROVED)
     // -----------------------------
     let aiIdeas = [];
 
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-     const prompt = `
-Generate ${count || 5} unique and practical business ideas for India.
+      const prompt = `
+Generate business ideas based on the user's inputs.
 
-Details:
+User Inputs:
 - Budget: ₹${budget}
 - Location: ${location}
-- Type: ${type}
+- Business Type: ${type}
 
-Rules:
-- Give short idea names
-- Avoid generic ideas like "start a shop"
-- Make ideas realistic and specific to Indian market
-- Focus on profitable and trending ideas
+Instructions:
+- Give ONLY realistic ideas that work specifically in ${location}
+- Match ideas strictly within budget ₹${budget}
+- Focus on Indian market
+- Avoid generic ideas
+- Keep names short and clear
 
-Only return list of idea names.
+Return ONLY idea names (no explanation, no numbering, no symbols).
+
+Generate ${count || 10} ideas.
 `;
-console.log("Calling Gemini...");
+
+      console.log("Calling Gemini...");
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-console.log("Gemini response:", text);
+
+      console.log("Gemini response:", text);
+
       aiIdeas = text
         .split("\n")
         .map(i => i.replace(/[-*0-9.]/g, "").trim())
         .filter(i => i.length > 3);
 
     } catch (err) {
-  console.error("GEMINI ERROR:", err);
-}
-    
+      console.error("GEMINI ERROR:", err);
+    }
 
     // -----------------------------
-    // 🔁 FINAL OUTPUT
+    // 🔁 FINAL OUTPUT (UNCHANGED LOGIC)
     // -----------------------------
     const ideas = [];
-    const c = Number(count) || 3;
+    const c = Number(count) || 5;
     const b = Number(budget);
 
     for (let i = 0; i < c; i++) {
