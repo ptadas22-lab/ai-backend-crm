@@ -3,35 +3,42 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
-
 
 // ✅ Middleware
 app.use(cors());
 app.use(express.json());
 
-// ✅ Gemini setup (FIXED)
+// ✅ ENV CHECK
+console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
+
+// ✅ Gemini setup
 const API_KEY = process.env.GEMINI_API_KEY;
 
-if (!API_KEY) {
+let genAI = null;
+
+if (API_KEY) {
+  genAI = new GoogleGenerativeAI(API_KEY);
+} else {
   console.log("⚠️ No API key — AI disabled");
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
+// =======================================
+// ✅ GENERATE IDEAS ROUTE (KEEPING YOUR LOGIC)
+// =======================================
 
-// ✅ Route
 app.post("/generate", async (req, res) => {
-  if (!genAI) {
-    return res.json({
-      result: "AI not configured yet"
-    });
-  }
   try {
     const { budget, location, type, count } = req.body;
 
     if (!budget || !location || !type) {
-      return res.status(400).json({ error: "Missing fields" });
+      return res.status(400).json({
+        error: "Missing fields"
+      });
     }
+
+    // -----------------------------
+    // 🔥 EXISTING BASE IDEAS
+    // -----------------------------
 
     let baseIdeas = [];
 
@@ -77,53 +84,78 @@ app.post("/generate", async (req, res) => {
 
     let aiIdeas = [];
 
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // =======================================
+    // ✅ AI GENERATION
+    // =======================================
 
-      const prompt = `
-Generate business ideas based on the user's inputs.
+    if (genAI) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: "gemini-1.5-flash"
+        });
 
-User Inputs:
-- Budget: ₹${budget}
-- Location: ${location}
-- Business Type: ${type}
+        const prompt = `
+Generate business ideas for India.
 
-Instructions:
-- Give ONLY realistic ideas that work specifically in ${location}
-- Match ideas strictly within budget ₹${budget}
-- Focus on Indian market
-- Avoid generic ideas
-- Keep names short and clear
+Budget: ₹${budget}
+Location: ${location}
+Business Type: ${type}
 
-Return ONLY idea names.
+Rules:
+- Short idea names
+- Practical ideas
+- Trending ideas
+- Realistic for Indian market
 
 Generate ${count || 10} ideas.
 `;
 
-      console.log("Calling Gemini...");
-      const result = await model.generateContent(prompt);
-      console.log("RAW RESULT:", JSON.stringify(result, null, 2));
-      const text = result.response.text();
+        console.log("Calling Gemini...");
 
-      aiIdeas = text
-        .split("\n")
-        .map(i => i.replace(/[-*0-9.]/g, "").trim())
-        .filter(i => i.length > 3);
+        const result = await model.generateContent(prompt);
 
-    } catch (err) {
-      console.error("GEMINI ERROR:", err);
+        let text = "";
+
+        try {
+          text = result.response.text();
+        } catch (e) {
+          text =
+            result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        }
+
+        console.log("AI RESPONSE:", text);
+
+        aiIdeas = text
+          .split("\n")
+          .map(i => i.replace(/[-*0-9.]/g, "").trim())
+          .filter(i => i.length > 3);
+
+      } catch (err) {
+        console.log("Gemini failed, using fallback ideas");
+      }
     }
 
+    // =======================================
+    // ✅ FINAL OUTPUT
+    // =======================================
+
     const ideas = [];
+
     const c = Number(count) || 5;
     const b = Number(budget);
 
     for (let i = 0; i < c; i++) {
-      const ideaText = aiIdeas[i] || baseIdeas[i % baseIdeas.length];
-      const demand = demandTypes[i % demandTypes.length];
+      const ideaText =
+        aiIdeas[i] || baseIdeas[i % baseIdeas.length];
 
-      const investment = Math.floor(b * (0.3 + i * 0.05));
-      const profitValue = Math.floor(b * (0.08 + i * 0.02));
+      const demand =
+        demandTypes[i % demandTypes.length];
+
+      const investment =
+        Math.floor(b * (0.3 + i * 0.05));
+
+      const profitValue =
+        Math.floor(b * (0.08 + i * 0.02));
 
       ideas.push(`
 ${ideaText}
@@ -137,15 +169,23 @@ ${ideaText}
 `);
     }
 
-    res.json({ result: ideas.join("\n\n") });
+    res.json({
+      result: ideas.join("\n\n")
+    });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("GENERATE ERROR:", err);
+
+    res.status(500).json({
+      error: "Server error"
+    });
   }
 });
 
+// =======================================
+// ✅ PLAN ROUTE (SAFE VERSION)
+// =======================================
 
-// ✅ PLAN ROUTE (FIXED)
 app.post("/plan", async (req, res) => {
   try {
     const { name, location, profit } = req.body;
@@ -156,96 +196,110 @@ app.post("/plan", async (req, res) => {
       });
     }
 
-    // ✅ STATIC AI-LIKE CONTENT (NO ERROR)
-    const plan = `
+    // =======================================
+    // ✅ FALLBACK CONTENT
+    // =======================================
+
+    let plan = `
 📰 ${name} Business Guide
 
 📍 Location: ${location}
 💰 Expected Profit: ${profit}
 
 📊 Market Demand:
-This business has strong potential in ${location} due to local demand and growing customer interest.
+This business has strong demand in ${location} because customers are actively looking for affordable and quality services.
 
-💡 Why It Works:
-People in ${location} are actively looking for convenient and affordable solutions, making this business profitable.
+💡 Why This Business Works:
+This idea fits current trends and can attract repeat customers if managed properly.
 
-🛠️ How to Start:
-- Research local demand
-- Start with minimum investment
-- Target first 10 customers
+🛠️ How To Start:
+- Research local competitors
+- Start with minimum setup
+- Focus on first customers
 - Improve based on feedback
 
-📣 Marketing:
-- Use WhatsApp groups
-- Promote via Instagram reels
-- Offer discounts initially
+📣 Marketing Strategy:
+- Promote through WhatsApp
+- Use Instagram reels
+- Offer launch discounts
+- Collect customer reviews
 
 ⚠️ Risks:
-- Competition
-- Slow initial growth
+- Initial competition
+- Slow growth in beginning
+- Customer trust building
 
-📈 Growth:
-Scale by expanding reach and improving service quality.
+📈 Growth Opportunities:
+Expand using referrals, online platforms, and repeat customers.
 `;
 
-    res.json({ plan });
+    // =======================================
+    // ✅ AI CONTENT (OPTIONAL)
+    // =======================================
 
-  } catch (err) {
-    res.json({
-      plan: "Server error but fallback is working"
-    });
-  }
-});
-    // ✅ Create model
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
-    });
+    if (genAI) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: "gemini-1.5-flash"
+        });
 
-    const prompt = `
-Write a simple business guide.
+        const prompt = `
+Write a detailed business guide.
 
 Business: ${name}
 Location: ${location}
-Profit: ${profit}
+Expected Profit: ${profit}
 
-Explain clearly with steps, marketing, and growth.
+Include:
+- Market demand
+- Why it works
+- How to start
+- Marketing
+- Risks
+- Growth
 `;
 
-    // ✅ SAFE AI CALL
-    console.log("API KEY CHECK:", process.env.GEMINI_API_KEY);
-console.log("Calling Gemini model...");
-    const result = await model.generateContent(prompt);
+        console.log("Calling Gemini PLAN...");
 
-    let text = "";
+        const result = await model.generateContent(prompt);
 
-    // ✅ SAFE RESPONSE EXTRACTION (NO CRASH)
-    if (result && result.response) {
-      if (typeof result.response.text === "function") {
-        text = result.response.text();
-      } else if (
-        result.response.candidates &&
-        result.response.candidates.length > 0
-      ) {
-        text =
-          result.response.candidates[0]?.content?.parts?.[0]?.text || "";
+        let aiText = "";
+
+        try {
+          aiText = result.response.text();
+        } catch (e) {
+          aiText =
+            result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        }
+
+        if (aiText && aiText.length > 20) {
+          plan = aiText;
+        }
+
+      } catch (err) {
+        console.log("PLAN AI failed, using fallback");
       }
     }
 
-    // ✅ FINAL RESPONSE (ALWAYS SAFE)
     res.json({
-      plan: text || "AI could not generate content"
+      plan
     });
 
-  console.error("PLAN ERROR FULL:", err);
+  } catch (err) {
+    console.error("PLAN ERROR:", err);
 
-    // ✅ NEVER CRASH → ALWAYS RETURN RESPONSE
     res.json({
-      plan: "Server error occurred. Please try again."
+      plan: "Server error occurred"
     });
   }
 });
+
+// =======================================
 // ✅ START SERVER
+// =======================================
+
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
