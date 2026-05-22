@@ -173,18 +173,18 @@ ${ideaText}
 `);
     }
 console.log("FINAL AI IDEAS USED:", aiIdeas);
-    res.json({
-      result: ideas.join("\n\n")
-    });
 
- catch (err) {
-  console.error("GEMINI PLAN ERROR:", err);
+res.json({
+  result: ideas.join("\n\n")
+});
+
+} catch (err) {
+  console.error("GENERATE ERROR:", err);
+
+  res.status(500).json({
+    error: "Server error"
+  });
 }
-
-    res.status(500).json({
-      error: "Server error"
-    });
-  }
 });
 
 // =======================================
@@ -322,18 +322,7 @@ app.get("/test-ai", async (req, res) => {
     });
   }
 });
- const result = await model.generateContent("Say hello");
-
-    res.json({
-      text: result.response.text()
-    });
-
-  } catch (err) {
-    res.json({
-      error: err.message
-    });
-  }
-});
+ 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
