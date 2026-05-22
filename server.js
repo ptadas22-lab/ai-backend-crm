@@ -302,7 +302,24 @@ Include:
 // =======================================
 
 const PORT = process.env.PORT || 3000;
+app.get("/test-ai", async (req, res) => {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash"
+    });
 
+    const result = await model.generateContent("Say hello");
+
+    res.json({
+      text: result.response.text()
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
