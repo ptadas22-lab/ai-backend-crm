@@ -129,7 +129,7 @@ Generate ${count || 10} ideas.
           .split("\n")
           .map(i => i.replace(/[-*0-9.]/g, "").trim())
           .filter(i => i.length > 3);
-
+console.log("AI IDEAS COUNT:", aiIdeas.length);
       } catch (err) {
         console.log("Gemini failed, using fallback ideas");
       }
@@ -168,7 +168,7 @@ ${ideaText}
 💡 Tip: Start small and scale based on demand
 `);
     }
-
+console.log("FINAL AI IDEAS USED:", aiIdeas);
     res.json({
       result: ideas.join("\n\n")
     });
@@ -277,8 +277,8 @@ Include:
         }
 
       } catch (err) {
-        console.log("PLAN AI failed, using fallback");
-      }
+  console.error("GEMINI ERROR:", err);
+}
     }
 
     res.json({
