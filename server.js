@@ -133,10 +133,11 @@ Generate ${count || 10} ideas.
           .map(i => i.replace(/[-*0-9.]/g, "").trim())
           .filter(i => i.length > 3);
 console.log("AI IDEAS COUNT:", aiIdeas.length);
-      } catch (err) {
-  console.error("GEMINI GENERATE ERROR:", err);
-}
-      
+      } catch (aiErr) {
+        console.error("AI ERROR:", aiErr);
+      }
+    }
+     
     
 
     // =======================================
