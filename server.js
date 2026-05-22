@@ -94,7 +94,7 @@ app.post("/generate", async (req, res) => {
     if (genAI) {
       try {
         const model = genAI.getGenerativeModel({
-          model: "gemini-1.5-flash"
+          model: "gemini-2.0-flash"
         });
 
         const prompt = `
@@ -243,7 +243,7 @@ Expand using referrals, online platforms, and repeat customers.
     if (genAI) {
       try {
         const model = genAI.getGenerativeModel({
-          model: "gemini-1.5-flash"
+          model: "gemini-2.0-flash"
         });
 
         const prompt = `
@@ -305,7 +305,7 @@ const PORT = process.env.PORT || 3000;
 app.get("/test-ai", async (req, res) => {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
+      model: "gemini-2.0-flash"
     });
 
     const result = await model.generateContent("Say hello");
@@ -323,7 +323,7 @@ app.get("/test-ai", async (req, res) => {
 app.get("/test-ai", async (req, res) => {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
+      model: "gemini-2.0-flash"
     });
 
     const result = await model.generateContent("Say hello");
