@@ -1,5 +1,5 @@
-console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
 require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -18,7 +18,7 @@ const API_KEY = process.env.GEMINI_API_KEY;
 
 let genAI = null;
 
-if (API_KEY) {
+if (API_KEY && API_KEY.trim() !== "") {
   genAI = new GoogleGenerativeAI(API_KEY);
 } else {
   console.log("⚠️ No API key — AI disabled");
