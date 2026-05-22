@@ -134,9 +134,10 @@ Generate ${count || 10} ideas.
           .filter(i => i.length > 3);
 console.log("AI IDEAS COUNT:", aiIdeas.length);
       } catch (err) {
-        console.log("Gemini failed, using fallback ideas");
-      }
-    }
+  console.error("GEMINI GENERATE ERROR:", err);
+}
+      
+    
 
     // =======================================
     // ✅ FINAL OUTPUT
@@ -176,8 +177,9 @@ console.log("FINAL AI IDEAS USED:", aiIdeas);
       result: ideas.join("\n\n")
     });
 
-  } catch (err) {
-    console.error("GENERATE ERROR:", err);
+ catch (err) {
+  console.error("GEMINI PLAN ERROR:", err);
+}
 
     res.status(500).json({
       error: "Server error"
