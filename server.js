@@ -1,4 +1,6 @@
+const axios = require("axios");
 require("dotenv").config();
+console.log(process.env);
 console.log("RUNNING FILE:", __filename);
 console.log(process.env.GEMINI_API_KEY);
 const express = require("express");
@@ -90,53 +92,40 @@ app.post("/generate", async (req, res) => {
     // =======================================
     // ✅ AI GENERATION
     // =======================================
-
-    if (genAI) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: "gemini-2.0-flash"
-        });
-
-        const prompt = `
-Generate business ideas for India.
+try {
+  const prompt = `
+Generate ${count || 10} unique business ideas.
 
 Budget: ₹${budget}
 Location: ${location}
 Business Type: ${type}
 
-Rules:
-- Short idea names
-- Practical ideas
-- Trending ideas
-- Realistic for Indian market
-
-Generate ${count || 10} ideas.
+Return only idea names, one per line.
 `;
 
-        console.log("Calling Gemini...");
-
-        const result = await model.generateContent(prompt);
-
-        let text = "";
-
-        try {
-          text = result.response.text();
-        } catch (e) {
-          text =
-            result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        }
-
-        console.log("AI RESPONSE:", text);
-
-        aiIdeas = text
-          .split("\n")
-          .map(i => i.replace(/[-*0-9.]/g, "").trim())
-          .filter(i => i.length > 3);
-console.log("AI IDEAS COUNT:", aiIdeas.length);
-      } catch (aiErr) {
-        console.error("AI ERROR:", aiErr);
+  const response = await axios.post(
+    "https://api-inference.huggingface.co/models/google/flan-t5-large",
+    {
+      inputs: prompt
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.HF_TOKEN}`
       }
     }
+  );
+
+  const text =
+    response.data?.[0]?.generated_text || "";
+
+  aiIdeas = text
+    .split("\n")
+    .map(i => i.replace(/[-*0-9.]/g, "").trim())
+    .filter(i => i.length > 3);
+
+} catch (aiErr) {
+  console.error("HF ERROR:", aiErr.message);
+}
      
     
 
