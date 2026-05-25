@@ -5,104 +5,140 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const API_KEY = process.env.GEMINI_API_KEY;
-let genAI = null;
+const genAI = API_KEY && API_KEY.trim() ? new GoogleGenerativeAI(API_KEY) : null;
 
-if (API_KEY && API_KEY.trim() !== "") {
-  genAI = new GoogleGenerativeAI(API_KEY);
+if (genAI) {
   console.log("Gemini enabled");
 } else {
-  console.log("No API key detected. Using local AI-style generator.");
+  console.log("No API key detected. Using smart local generation mode.");
 }
 
-function buildLocalAiIdeas(type, location, count) {
-  const starters = [
-    "Smart",
-    "Hyperlocal",
-    "Lean",
-    "Quick-start",
-    "Digital-first",
-    "Community-driven"
-  ];
+const demandTypes = [
+  "High demand in local markets",
+  "Growing demand among young customers",
+  "Popular in residential areas",
+  "High repeat customers potential",
+  "Trending business in urban areas",
+  "Good demand near colleges/offices",
+  "Increasing demand via online orders"
+];
 
-  const offers = [
-    "subscription packs",
-    "weekend offers",
-    "premium upsell",
-    "wholesale tie-ups",
-    "delivery bundles",
-    "corporate plans"
+const trendAngles = [
+  "subscription model",
+  "WhatsApp-first sales",
+  "quick delivery",
+  "corporate partnerships",
+  "student-focused pricing",
+  "women-led branding",
+  "festival seasonal offers"
+];
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function scoreIdea(budget, index) {
+  const base = Math.max(45, Math.min(92, 55 + Math.floor(budget / 10000) + index * 2));
+  return Math.min(98, base);
+}
+
+function buildLocalAiIdeas(type, location, budget, count) {
+  const normalizedType = String(type || "service").trim();
+  const normalizedLocation = String(location || "your city").trim();
+
+  const templates = [
+    `${normalizedType} starter packs for ${normalizedLocation}`,
+    `${normalizedLocation} ${normalizedType} express service`,
+    `Micro-${normalizedType} studio with online bookings`,
+    `Hyperlocal ${normalizedType} + delivery combo`,
+    `${normalizedType} consultation + premium upsell`,
+    `${normalizedType} community membership model`
   ];
 
   return Array.from({ length: count }, (_, i) => {
-    const starter = starters[i % starters.length];
-    const offer = offers[(i + 2) % offers.length];
-    return `${starter} ${type} business in ${location} with ${offer}`;
+    const title = templates[i % templates.length];
+    const investment = Math.floor(budget * (0.25 + i * 0.06));
+    const monthlyProfit = Math.floor(budget * (0.09 + i * 0.02));
+
+    return {
+      rank: i + 1,
+      title,
+      marketDemand: demandTypes[i % demandTypes.length],
+      trend: trendAngles[i % trendAngles.length],
+      investment,
+      monthlyProfit,
+      confidence: scoreIdea(budget, i)
+    };
   });
+}
+
+function parseGeminiIdeas(text, location, budget, count) {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^[\s\-*\d.)]+/, "").trim())
+    .filter((line) => line.length > 3)
+    .slice(0, count)
+    .map((title, i) => ({
+      rank: i + 1,
+      title,
+      marketDemand: demandTypes[i % demandTypes.length],
+      trend: trendAngles[i % trendAngles.length],
+      investment: Math.floor(budget * (0.3 + i * 0.05)),
+      monthlyProfit: Math.floor(budget * (0.08 + i * 0.02)),
+      confidence: scoreIdea(budget, i)
+    }));
 }
 
 app.post("/generate", async (req, res) => {
   try {
     const { budget, location, type, count } = req.body;
-
     if (!budget || !location || !type) {
-      return res.status(400).json({ error: "Missing fields" });
+      return res.status(400).json({ error: "Missing fields: budget, location, type are required." });
     }
 
-    const demandTypes = [
-      "High demand in local markets",
-      "Growing demand among young customers",
-      "Popular in residential areas",
-      "High repeat customers potential",
-      "Trending business in urban areas",
-      "Good demand near colleges/offices",
-      "Increasing demand via online orders"
-    ];
+    const c = Math.min(Math.max(toNumber(count, 5), 1), 20);
+    const b = Math.max(toNumber(budget, 0), 1000);
 
-    const c = Math.min(Math.max(Number(count) || 5, 1), 20);
-    const b = Number(budget);
-
-    let aiIdeas = [];
+    let ideas = [];
+    let mode = "local";
 
     if (genAI) {
       try {
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const prompt = `Generate ${c} short practical business ideas for India. Budget: ₹${budget}, Location: ${location}, Type: ${type}.`;
+        const prompt = `Generate ${c} short practical business ideas for India. Budget: ₹${b}. Location: ${location}. Business Type: ${type}. Return only idea names, one per line.`;
         const result = await model.generateContent(prompt);
         const text = result?.response?.text?.() || "";
-
-        aiIdeas = text
-          .split("\n")
-          .map((i) => i.replace(/[-*0-9.]/g, "").trim())
-          .filter((i) => i.length > 3)
-          .slice(0, c);
-      } catch (aiErr) {
-        console.error("AI ERROR:", aiErr.message);
+        ideas = parseGeminiIdeas(text, location, b, c);
+        if (ideas.length > 0) {
+          mode = "gemini";
+        }
+      } catch (error) {
+        console.error("Gemini generation failed, using local mode:", error.message);
       }
     }
 
-    if (aiIdeas.length === 0) {
-      aiIdeas = buildLocalAiIdeas(type, location, c);
+    if (ideas.length === 0) {
+      ideas = buildLocalAiIdeas(type, location, b, c);
     }
 
-    const ideas = aiIdeas.map((ideaText, i) => {
-      const investment = Math.floor(b * (0.3 + i * 0.05));
-      const profitValue = Math.floor(b * (0.08 + i * 0.02));
-
-      return `${ideaText}\n\n📍 Location: ${location}\n💸 Investment: ₹${investment}\n📈 Expected Profit: ₹${profitValue}/month\n🔥 ${demandTypes[i % demandTypes.length]}\n\n💡 Tip: Start small and scale based on demand`;
-    });
-
     return res.json({
-      mode: genAI ? "gemini" : "local",
-      result: ideas.join("\n\n")
+      mode,
+      meta: {
+        location,
+        type,
+        budget: b,
+        generatedAt: new Date().toISOString()
+      },
+      ideas
     });
-  } catch (err) {
-    console.error("GENERATE ERROR:", err);
+  } catch (error) {
+    console.error("GENERATE ERROR:", error);
     return res.status(500).json({ error: "Server error" });
   }
 });
@@ -110,47 +146,42 @@ app.post("/generate", async (req, res) => {
 app.post("/plan", async (req, res) => {
   try {
     const { name, location, profit } = req.body;
-
     if (!name || !location) {
-      return res.json({ plan: "Missing required data" });
+      return res.status(400).json({ error: "Missing fields: name and location are required." });
     }
 
-    let plan = `\n📰 ${name} Business Guide\n\n📍 Location: ${location}\n💰 Expected Profit: ${profit}\n\n📊 Market Demand:\nThis business has strong demand in ${location} because customers are actively looking for affordable and quality services.\n\n💡 Why This Business Works:\nThis idea fits current trends and can attract repeat customers if managed properly.\n\n🛠️ How To Start:\n- Research local competitors\n- Start with minimum setup\n- Focus on first customers\n- Improve based on feedback\n\n📣 Marketing Strategy:\n- Promote through WhatsApp\n- Use Instagram reels\n- Offer launch discounts\n- Collect customer reviews\n\n⚠️ Risks:\n- Initial competition\n- Slow growth in beginning\n- Customer trust building\n\n📈 Growth Opportunities:\nExpand using referrals, online platforms, and repeat customers.\n`;
+    let plan = `# ${name} - Smart Launch Plan\n\n` +
+      `Location: ${location}\nExpected Monthly Profit: ₹${profit || "TBD"}\n\n` +
+      `## 1) First 7 Days\n- Validate demand with 15 customer interviews\n- Create simple pricing and starter offer\n- Set up WhatsApp Business and Instagram profile\n\n` +
+      `## 2) Next 30 Days\n- Run neighborhood launch campaign\n- Track leads, conversion, and repeat rate\n- Improve offer based on feedback\n\n` +
+      `## 3) Risks and Mitigation\n- Low demand -> pivot niche quickly\n- High competition -> focus on speed + service quality\n- Cash flow stress -> keep fixed costs lean\n`;
 
     if (genAI) {
       try {
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(
-          `Write a detailed business guide for ${name} in ${location} with expected profit ${profit}.`
-        );
+        const prompt = `Create a concise actionable business launch plan for ${name} in ${location}. Include: demand validation, setup checklist, pricing, marketing, risks, and first-90-day growth.`;
+        const result = await model.generateContent(prompt);
         const aiText = result?.response?.text?.() || "";
-        if (aiText.length > 20) {
+        if (aiText.length > 40) {
           plan = aiText;
         }
-      } catch (err) {
-        console.error("GEMINI PLAN ERROR:", err.message);
+      } catch (error) {
+        console.error("PLAN AI ERROR:", error.message);
       }
     }
 
     return res.json({ plan });
-  } catch (err) {
-    console.error("PLAN ERROR:", err);
-    return res.json({ plan: "Server error occurred" });
+  } catch (error) {
+    console.error("PLAN ERROR:", error);
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
-app.get("/test-ai", async (_req, res) => {
-  if (!genAI) {
-    return res.json({ mode: "local", text: "AI key not configured, local mode is active." });
-  }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const result = await model.generateContent("Say hello");
-    return res.json({ mode: "gemini", text: result.response.text() });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+app.get("/test-ai", (_req, res) => {
+  res.json({
+    mode: genAI ? "gemini" : "local",
+    status: "ready"
+  });
 });
 
 app.get("*", (_req, res) => {
