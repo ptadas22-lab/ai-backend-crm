@@ -3,8 +3,14 @@ const ideasWrap = document.getElementById("ideas");
 const planBox = document.getElementById("plan");
 const modePill = document.getElementById("mode-pill");
 const planBtn = document.getElementById("generate-plan");
+const apiBaseInput = document.getElementById("api-base");
 
 let latest = null;
+
+function getApiBase() {
+  const value = apiBaseInput.value.trim();
+  return value || window.location.origin;
+}
 
 function money(n) {
   return `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -29,11 +35,11 @@ function renderIdeas(data) {
 
 async function checkMode() {
   try {
-    const response = await fetch("/test-ai");
+    const response = await fetch(`${getApiBase()}/test-ai`);
     const data = await response.json();
     modePill.textContent = `Mode: ${data.mode}`;
   } catch (_error) {
-    modePill.textContent = "Mode: offline";
+    modePill.textContent = "Mode: unreachable backend";
   }
 }
 
@@ -49,7 +55,7 @@ form.addEventListener("submit", async (event) => {
   };
 
   try {
-    const response = await fetch("/generate", {
+    const response = await fetch(`${getApiBase()}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -79,7 +85,7 @@ planBtn.addEventListener("click", async () => {
   planBox.textContent = "Building action plan...";
 
   try {
-    const response = await fetch("/plan", {
+    const response = await fetch(`${getApiBase()}/plan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -100,4 +106,5 @@ planBtn.addEventListener("click", async () => {
   }
 });
 
+apiBaseInput.addEventListener("change", checkMode);
 checkMode();

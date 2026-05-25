@@ -10,9 +10,16 @@
   <main class="container">
     <header>
       <h1>Smart Business Idea App</h1>
-      <p>One local app: frontend + backend + smart fallback AI.</p>
+      <p>Frontend can run on GitHub Pages and connect to your backend API URL.</p>
       <span id="mode-pill" class="pill">Mode: checking...</span>
     </header>
+
+    <section class="card">
+      <h2>Backend Connection</h2>
+      <label>Backend API Base URL
+        <input id="api-base" type="url" placeholder="https://your-backend.onrender.com" />
+      </label>
+    </section>
 
     <form id="idea-form" class="card">
       <h2>Generate Ideas</h2>

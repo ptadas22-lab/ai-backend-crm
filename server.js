@@ -5,18 +5,27 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS blocked for this origin"));
+    }
+  })
+);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const genAI = API_KEY && API_KEY.trim() ? new GoogleGenerativeAI(API_KEY) : null;
-
-if (genAI) {
-  console.log("Gemini enabled");
-} else {
-  console.log("No API key detected. Using smart local generation mode.");
-}
 
 const demandTypes = [
   "High demand in local markets",
@@ -78,7 +87,7 @@ function buildLocalAiIdeas(type, location, budget, count) {
   });
 }
 
-function parseGeminiIdeas(text, location, budget, count) {
+function parseGeminiIdeas(text, budget, count) {
   return text
     .split("\n")
     .map((line) => line.replace(/^[\s\-*\d.)]+/, "").trim())
@@ -114,7 +123,7 @@ app.post("/generate", async (req, res) => {
         const prompt = `Generate ${c} short practical business ideas for India. Budget: ₹${b}. Location: ${location}. Business Type: ${type}. Return only idea names, one per line.`;
         const result = await model.generateContent(prompt);
         const text = result?.response?.text?.() || "";
-        ideas = parseGeminiIdeas(text, location, b, c);
+        ideas = parseGeminiIdeas(text, b, c);
         if (ideas.length > 0) {
           mode = "gemini";
         }
@@ -180,7 +189,8 @@ app.post("/plan", async (req, res) => {
 app.get("/test-ai", (_req, res) => {
   res.json({
     mode: genAI ? "gemini" : "local",
-    status: "ready"
+    status: "ready",
+    corsOrigins: allowedOrigins
   });
 });
 
