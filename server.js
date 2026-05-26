@@ -1,8 +1,3 @@
-diff --git a/server.js b/server.js
-index a14ed279eee61a15e1bca477bee72c6b81b8c67b..fe8f02ff7db79e226b797e6adaedf581e128749d 100644
---- a/server.js
-+++ b/server.js
-@@ -1,318 +1,249 @@
  const axios = require("axios");
  require("dotenv").config();
 -console.log(process.env);
