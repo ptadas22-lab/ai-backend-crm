@@ -1,5 +1,6 @@
 const axios = require("axios");
 require("dotenv").config();
+console.log(process.env);
 console.log("RUNNING FILE:", __filename);
 console.log(process.env.GEMINI_API_KEY);
 const express = require("express");
