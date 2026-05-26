@@ -2,7 +2,7 @@ const axios = require("axios");
 require("dotenv").config();
 console.log(process.env);
 console.log("RUNNING FILE:", __filename);
-console.log(process.env.GEMINI_API_KEY);
+console.log(process.env.HF_TOKEN);
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -14,10 +14,10 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ ENV CHECK
-console.log("ENV CHECK:", process.env.GEMINI_API_KEY);
+console.log("ENV CHECK:", process.env.HF_TOKEN);
 
 // ✅ Gemini setup
-const API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = process.env.HF_TOKEN;
 
 let genAI = null;
 
