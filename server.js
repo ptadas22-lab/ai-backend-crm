@@ -5,7 +5,7 @@
 -console.log(process.env.HF_TOKEN);
  const express = require("express");
  const cors = require("cors");
--const { GoogleGenerativeAI } = require("@google/generative-ai");
+
  
  const app = express();
  
@@ -23,10 +23,10 @@
 -const API_KEY = process.env.HF_TOKEN;
 +const hasHfConfig = Boolean(HF_TOKEN && HF_TOKEN.trim() !== "");
  
--let genAI = null;
+
 -
 -if (API_KEY && API_KEY.trim() !== "") {
--  genAI = new GoogleGenerativeAI(API_KEY);
+- 
 -} else {
 -  console.log("⚠️ No API key — AI disabled");
 +if (!hasHfConfig) {
@@ -277,14 +277,8 @@
 -    // ✅ AI CONTENT (OPTIONAL)
 -    // =======================================
 -
--    if (genAI) {
-+    if (hasHfConfig) {
-       try {
--        const model = genAI.getGenerativeModel({
--          model: "gemini-2.0-flash"
--        });
--
-         const prompt = `
+-   
+- const prompt = `
  Write a detailed business guide.
  
  Business: ${name}
@@ -300,7 +294,7 @@
  - Growth
  `;
  
--        console.log("Calling Gemini PLAN...");
+-        
 -
 -        const result = await model.generateContent(prompt);
 -
@@ -348,9 +342,7 @@
 +
  app.get("/test-ai", async (req, res) => {
    try {
--    const model = genAI.getGenerativeModel({
--      model: "gemini-2.0-flash"
--    });
+-   
 -
 -    const result = await model.generateContent("Say hello");
 +    const text = await generateWithHuggingFace("Say hello in one short sentence.");
