@@ -9,7 +9,7 @@ app.use(express.json());
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama3-8b-8192"; // free model on Groq
+const MODEL = "llama-3.3-70b-versatile";
 
 async function callGroq(prompt) {
   const res = await fetch(GROQ_URL, {
