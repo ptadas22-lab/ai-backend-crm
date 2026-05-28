@@ -36,13 +36,22 @@ app.get("/", (req, res) => {
   res.json({ status: "✅ AI Business Generator running" });
 });
 
-app.get("/test-ai", (req, res) => {
-  res.json({
-    status: "ok",
-    key: GROQ_API_KEY ? "set ✅" : "missing ❌"
-  });
+app.get("/test-ai", async (req, res) => {
+  try {
+    const testRes = await callGroq("Say hello in 5 words.");
+    res.json({
+      status: "ok",
+      key: GROQ_API_KEY ? "set ✅" : "missing ❌",
+      ai_response: testRes || "empty response"
+    });
+  } catch (err) {
+    res.json({
+      status: "error",
+      key: GROQ_API_KEY ? "set ✅" : "missing ❌",
+      error: err.message
+    });
+  }
 });
-
 // ── Generate Ideas ─────────────────────────────────────
 app.post("/generate", async (req, res) => {
   const { budget, location, type, count = 3 } = req.body;
