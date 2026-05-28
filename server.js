@@ -1,137 +1,162 @@
 require("dotenv").config();
-const axios = require("axios");
 const express = require("express");
 const cors = require("cors");
+const fetch = require("node-fetch");
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-const HF_TOKEN = process.env.HF_TOKEN;
-const HF_MODEL = process.env.HF_MODEL || "google/flan-t5-large";
-const HF_URL   = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
-const hasHfConfig = Boolean(HF_TOKEN && HF_TOKEN.trim() !== "");
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "llama3-8b-8192"; // free model on Groq
 
-if (!hasHfConfig) console.log("⚠️ No HF token — AI disabled, using fallback");
+async function callGroq(prompt) {
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1024,
+      temperature: 0.7
+    })
+  });
 
-async function generateWithHuggingFace(prompt) {
-  if (!hasHfConfig) return "";
-  const response = await axios.post(
-    HF_URL,
-    { inputs: prompt },
-    { headers: { Authorization: `Bearer ${HF_TOKEN}` } }
-  );
-  return response.data?.[0]?.generated_text || "";
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.choices?.[0]?.message?.content || "";
 }
 
+// ── Health check ───────────────────────────────────────
+app.get("/", (req, res) => {
+  res.json({ status: "✅ AI Business Generator running" });
+});
+
+app.get("/test-ai", (req, res) => {
+  res.json({
+    status: "ok",
+    key: GROQ_API_KEY ? "set ✅" : "missing ❌"
+  });
+});
+
+// ── Generate Ideas ─────────────────────────────────────
 app.post("/generate", async (req, res) => {
+  const { budget, location, type, count = 3 } = req.body;
+
+  if (!budget || !location || !type) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  // Fallback ideas if no API key
+  if (!GROQ_API_KEY) {
+    const fallback = generateFallback(budget, location, type, count);
+    return res.json({ result: fallback });
+  }
+
   try {
-    const { budget, location, type, count } = req.body;
-    if (!budget || !location || !type)
-      return res.status(400).json({ error: "Missing fields" });
+    const prompt = `Generate exactly ${count} business ideas for India.
+Budget: ₹${budget}
+Location: ${location}
+Type: ${type}
 
-    let baseIdeas = [];
-    if (type.toLowerCase().includes("food")) {
-      baseIdeas = [
-        `Cloud kitchen for ${location}`,
-        `Street food cart (evening crowd focus)`,
-        `Healthy tiffin service for offices`,
-        `Late-night snacks delivery`,
-        `Homemade sweets business`,
-        `Juice & smoothie bar`,
-        `College area fast food stall`
-      ];
-    } else if (type.toLowerCase().includes("online")) {
-      baseIdeas = [
-        `Instagram store selling trending products`,
-        `Dropshipping business`,
-        `Digital products (ebooks/templates)`,
-        `Affiliate marketing store`,
-        `Print-on-demand T-shirt brand`,
-        `Local products selling via WhatsApp`
-      ];
-    } else {
-      baseIdeas = [
-        `Local service business for ${type}`,
-        `${type} consulting service`,
-        `${type} reselling`,
-        `${type} for small businesses`,
-        `Freelance ${type} services`,
-        `Subscription-based ${type}`
-      ];
-    }
+For each idea use this EXACT format with blank line between ideas:
 
-    const demandTypes = [
-      "High demand in local markets",
-      "Growing demand among young customers",
-      "Popular in residential areas",
-      "High repeat customers potential",
-      "Trending business in urban areas",
-      "Good demand near colleges/offices",
-      "Increasing demand via online orders"
-    ];
+Idea Name Here
 
-    let aiIdeas = [];
-    try {
-      const prompt = `Generate ${count || 10} unique business ideas.\nBudget: ₹${budget}\nLocation: ${location}\nBusiness Type: ${type}\nReturn only idea names, one per line.`;
-      const text = await generateWithHuggingFace(prompt);
-      aiIdeas = text.split("\n").map(i => i.replace(/[-*0-9.]/g,"").trim()).filter(i => i.length > 3);
-    } catch (aiErr) {
-      console.error("HF ERROR:", aiErr.message);
-    }
+📍 Location: ${location}
+💸 Investment: ₹[realistic amount]
+📈 Expected Profit: ₹[realistic amount]/month
+🔥 [one line market demand]
 
-    const ideas = [];
-    const c = Number(count) || 5;
-    const b = Number(budget);
+💡 Tip: [one practical starting tip]
 
-    for (let i = 0; i < c; i++) {
-      const ideaText    = aiIdeas[i] || baseIdeas[i % baseIdeas.length];
-      const demand      = demandTypes[i % demandTypes.length];
-      const investment  = Math.floor(b * (0.3 + i * 0.05));
-      const profitValue = Math.floor(b * (0.08 + i * 0.02));
-      ideas.push(`${ideaText}\n\n📍 Location: ${location}\n💸 Investment: ₹${investment}\n📈 Expected Profit: ₹${profitValue}/month\n🔥 ${demand}\n\n💡 Tip: Start small and scale based on demand`);
-    }
+No extra text, no numbering, just the ideas.`;
 
-    console.log("FINAL AI IDEAS USED:", aiIdeas);
-    res.json({ result: ideas.join("\n\n") });
+    const result = await callGroq(prompt);
+    res.json({ result });
 
   } catch (err) {
-    console.error("GENERATE ERROR:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("GROQ ERROR:", err.message);
+    // fallback if Groq fails
+    const fallback = generateFallback(budget, location, type, count);
+    res.json({ result: fallback });
   }
 });
 
+// ── Business Plan ──────────────────────────────────────
 app.post("/plan", async (req, res) => {
+  const { name, location, profit } = req.body;
+
+  if (!name || !location) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  if (!GROQ_API_KEY) {
+    return res.json({ plan: getFallbackPlan(name, location, profit) });
+  }
+
   try {
-    const { name, location, profit } = req.body;
-    if (!name || !location) return res.json({ plan: "Missing required data" });
+    const prompt = `Write a practical business guide for an Indian entrepreneur.
+Business: ${name}
+Location: ${location}
+Expected Profit: ${profit}
 
-    let plan = `📰 ${name} Business Guide\n\n📍 Location: ${location}\n💰 Expected Profit: ${profit}\n\n📊 Market Demand:\nThis business has strong demand in ${location} because customers are actively looking for affordable and quality services.\n\n💡 Why This Business Works:\nThis idea fits current trends and can attract repeat customers if managed properly.\n\n🛠️ How To Start:\n- Research local competitors\n- Start with minimum setup\n- Focus on first customers\n- Improve based on feedback\n\n📣 Marketing Strategy:\n- Promote through WhatsApp\n- Use Instagram reels\n- Offer launch discounts\n- Collect customer reviews\n\n⚠️ Risks:\n- Initial competition\n- Slow growth in beginning\n- Customer trust building\n\n📈 Growth Opportunities:\nExpand using referrals, online platforms, and repeat customers.`;
+Use **Section Name** format for these headers:
+**Market Demand**
+**Why This Works**
+**How To Start**
+**Marketing Strategy**
+**Risks**
+**Growth Opportunities**
 
-    try {
-      const prompt = `Write a detailed business guide.\nBusiness: ${name}\nLocation: ${location}\nExpected Profit: ${profit}\nInclude: Market demand, Why it works, How to start, Marketing, Risks, Growth`;
-      console.log("Calling Hugging Face PLAN...");
-      const aiText = await generateWithHuggingFace(prompt);
-      if (aiText && aiText.length > 20) plan = aiText;
-    } catch (err) {
-      console.error("HF PLAN ERROR:", err.message);
-    }
+Keep under 400 words. Be specific and practical for Indian market.`;
 
+    const plan = await callGroq(prompt);
     res.json({ plan });
+
   } catch (err) {
-    console.error("PLAN ERROR:", err);
-    res.json({ plan: "Server error occurred" });
+    console.error("PLAN ERROR:", err.message);
+    res.json({ plan: getFallbackPlan(name, location, profit) });
   }
 });
 
-app.get("/test-ai", async (req, res) => {
-  try {
-    const text = await generateWithHuggingFace("Say hello in one short sentence.");
-    res.json({ text: text || "AI not configured" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+// ── Fallback ideas (no API key needed) ────────────────
+function generateFallback(budget, location, type, count) {
+  const b = Number(budget);
+  const ideas = [];
+  const baseList = {
+    food: ["Cloud Kitchen", "Tiffin Service", "Juice Bar", "Street Food Cart", "Sweets Shop"],
+    online: ["Dropshipping Store", "Instagram Reselling", "Digital Products", "Affiliate Blog", "WhatsApp Business"],
+    tech: ["Mobile Repair Shop", "IT Support Service", "Computer Classes", "Web Design Service", "CCTV Installation"],
+    retail: ["General Store", "Clothing Boutique", "Stationery Shop", "Hardware Store", "Gift Shop"]
+  };
+
+  const key = Object.keys(baseList).find(k => type.toLowerCase().includes(k)) || "food";
+  const list = baseList[key];
+  const demands = [
+    "High demand in local markets",
+    "Growing demand among young customers",
+    "Popular in residential areas",
+    "Trending in urban areas",
+    "Good demand near colleges"
+  ];
+
+  for (let i = 0; i < Math.min(count, 5); i++) {
+    const name = list[i] || `${type} Business ${i + 1}`;
+    const inv  = Math.floor(b * (0.3 + i * 0.05));
+    const prof = Math.floor(b * (0.08 + i * 0.02));
+    ideas.push(`${name}\n\n📍 Location: ${location}\n💸 Investment: ₹${inv}\n📈 Expected Profit: ₹${prof}/month\n🔥 ${demands[i]}\n\n💡 Tip: Start small and scale based on demand`);
   }
-});
+  return ideas.join("\n\n");
+}
+
+function getFallbackPlan(name, location, profit) {
+  return `**Market Demand**\nStrong demand in ${location} for ${name}. Customers looking for quality and affordable services.\n\n**Why This Works**\nFits current market trends with high repeat customer potential.\n\n**How To Start**\n- Research local competitors\n- Start with minimum investment\n- Focus on getting first 10 customers\n- Improve based on feedback\n\n**Marketing Strategy**\n- Promote on WhatsApp groups\n- Use Instagram reels\n- Offer launch discounts\n- Collect Google reviews\n\n**Risks**\n- Initial slow growth\n- Building customer trust takes time\n- Competition from existing businesses\n\n**Growth Opportunities**\nExpand via referrals, online orders, and partnerships. Expected profit: ${profit}`;
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
